@@ -1,0 +1,21 @@
+# Never bake secrets into the image - credentials get passed in at
+# runtime instead (see README section on docker run --env-file).
+.env
+.env.example
+
+# Local virtual environment - the container builds its own clean one
+venv/
+
+# Local SQLite database - the container should start fresh, or use a
+# mounted volume for persistence
+*.db
+instance/
+
+__pycache__/
+*.pyc
+
+.git/
+.gitignore
+
+# Windows/editor files
+.vscode/

@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IT Ticketing System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <div class="app-layout">
+
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <h1 class="sidebar-title">IT Ticketing</h1>
+            <a href="#dashboard" class="nav-link" onclick="showSection('dashboard')">Dashboard</a>
+            <a href="#create" class="nav-link" onclick="showSection('create')">Create Ticket</a>
+            <a href="#tickets" class="nav-link" onclick="showAllTickets()">All Tickets</a>
+            <a href="#contacts" class="nav-link" onclick="showSection('contacts')">Customer Contacts</a>
+        </nav>
+
+        <!-- Main content -->
+        <main class="main-content">
+
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                <div class="flash-banner">
+                    {% for message in messages %}
+                        <div>{{ message }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endwith %}
+
+            <!-- Dashboard section -->
+            <section id="dashboard" class="page-section">
+                <div class="list-header">
+                    <div class="breadcrumb-row">
+                        <span class="breadcrumb-icon">IT</span>
+                        <span>Dashboard</span>
+                    </div>
+                    <div class="list-title-row">
+                        <div class="list-title-left">
+                            <h2>Support Overview</h2>
+                            <span class="list-title-chevron">&#9660;</span>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="section-intro">Welcome to the IT Support Ticketing System.</p>
+
+                <form class="check-inbox-form" method="POST" action="{{ url_for('check_inbox_route') }}" style="margin: 16px 0;">
+                    <button type="submit" class="toolbar-btn" style="background-color: var(--brand-950); color: #fff; border-color: var(--brand-950);">Check for new emails</button>
+                </form>
+
+                <div class="dashboard">
+
+                    <div class="card" onclick="showTicketsByStatus('Open')">
+                        <h3>Open Tickets</h3>
+                        <p>{{ tickets|selectattr("status", "equalto", "Open")|list|length }}</p>
+                    </div>
+
+                    <div class="card" onclick="showTicketsByStatus('In Progress')">
+                        <h3>In Progress</h3>
+                        <p>{{ tickets|selectattr("status", "equalto", "In Progress")|list|length }}</p>
+                    </div>
+
+                    <div class="card" onclick="showTicketsByStatus('Resolved')">
+                        <h3>Resolved</h3>
+                        <p>{{ tickets|selectattr("status", "equalto", "Resolved")|list|length }}</p>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- Create ticket section -->
+            <section id="create" class="page-section" style="display: none;">
+                <div class="list-header">
+                    <div class="breadcrumb-row">
+                        <span class="breadcrumb-icon">IT</span>
+                        <span>Tickets</span>
+                    </div>
+                    <div class="list-title-row">
+                        <div class="list-title-left">
+                            <h2>Create New Ticket</h2>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="section-intro">Log an issue on behalf of yourself or a user.</p>
+
+                <div class="ticket-form-card">
+                    <form method="POST" action="{{ url_for('create_ticket') }}">
+                        <div class="form-row">
+                            <label for="name">Your Name</label>
+                            <input type="text" id="name" name="name" required>
+                        </div>
+
+                        <div class="form-row">
+                            <label for="email">Email Address</label>
+                            <input type="email" id="email" name="email" required>
+                        </div>
+
+                        <div class="form-row">
+                            <label for="issue">Issue</label>
+                            <input type="text" id="issue" name="issue" required>
+                        </div>
+
+                        <div class="form-row">
+                            <label for="priority">Priority</label>
+                            <select id="priority" name="priority">
+                                <option value="Low">Low</option>
+                                <option value="Medium">Medium</option>
+                                <option value="High">High</option>
+                                <option value="Critical">Critical</option>
+                            </select>
+                        </div>
+
+                        <div class="form-row">
+                            <label for="description">Description</label>
+                            <textarea id="description" name="description" rows="6" required></textarea>
+                        </div>
+
+                        <button type="submit">Submit Ticket</button>
+                    </form>
+                </div>
+            </section>
+
+            
+        
+            <!-- All tickets section -->
+            <section id="tickets" class="page-section" style="display: none;">
+
+                <div class="list-header">
+                    <div class="breadcrumb-row">
+                        <span class="breadcrumb-icon">IT</span>
+                        <span>Tickets</span>
+                    </div>
+                    <div class="list-title-row">
+                        <div class="list-title-left">
+                            <h2 id="tickets-title">All Tickets</h2>
+                            <span class="list-title-chevron">&#9660;</span>
+                            <button type="button" class="pin-btn" title="Pinned">&#128204;</button>
+                        </div>
+                        <div class="toolbar">
+                            <button type="button" class="toolbar-btn" onclick="showSection('create')">New</button>
+                            <button type="button" class="toolbar-btn">Change Owner</button>
+                            <button type="button" class="toolbar-btn">Merge Tickets</button>
+                            <button type="button" class="toolbar-btn" onclick="window.print()">Printable View</button>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="list-meta">
+                    {{ tickets|length }} item{{ 's' if tickets|length != 1 else '' }}
+                    <span class="dot">&middot;</span> Sorted by Date/Time Opened
+                    <span class="dot">&middot;</span> Updated a few seconds ago
+                </p>
+
+                <div class="list-controls">
+                    <div class="list-search">
+                        <input type="text" id="ticket-search" placeholder="Search this list..." oninput="filterTicketsBySearch(this.value)">
+                    </div>
+                    <div class="icon-btn-group">
+                        <button type="button" class="icon-btn" title="Settings">&#9881;</button>
+                        <button type="button" class="icon-btn" title="Table view">&#9638;</button>
+                        <button type="button" class="icon-btn" title="Refresh" onclick="location.reload()">&#8635;</button>
+                        <button type="button" class="icon-btn" title="Filters">&#9660;</button>
+                    </div>
+                </div>
+
+                {% if tickets %}
+                <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="checkbox-col"><input type="checkbox" class="row-checkbox" disabled></th>
+                            <th><span class="th-label">Ticket # <span class="th-sort">&#9660;</span></span></th>
+                            <th><span class="th-label">Name <span class="th-sort">&#9660;</span></span></th>
+                            <th><span class="th-label">Email <span class="th-sort">&#9660;</span></span></th>
+                            <th><span class="th-label">Subject <span class="th-sort">&#9660;</span></span></th>
+                            <th><span class="th-label">Priority <span class="th-sort">&#9660;</span></span></th>
+                            <th><span class="th-label">Status <span class="th-sort">&#9660;</span></span></th>
+                            <th><span class="th-label">Reply</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ticket in tickets %}
+                        <tr class="ticket-row" data-status="{{ ticket.status }}" data-priority="{{ ticket.priority }}"
+                            data-search="{{ (ticket.name ~ ' ' ~ ticket.email ~ ' ' ~ ticket.issue)|lower }}">
+                            <td class="checkbox-col"><input type="checkbox" class="row-checkbox"></td>
+                            <td class="ticket-id">#{{ ticket.id }}</td>
+                            <td>{{ ticket.name }}</td>
+                            <td class="ticket-email">{{ ticket.email }}</td>
+                            <td>
+                                <a href="javascript:void(0)" class="ticket-issue-link" onclick="toggleReply({{ ticket.id }})">{{ ticket.issue }}</a>
+                            </td>
+                            <td>
+                                <span class="priority-tag priority-{{ ticket.priority|lower }}">{{ ticket.priority }}</span>
+                            </td>
+                            <td>
+                                <form class="status-form" method="POST" action="{{ url_for('update_status', ticket_id=ticket.id) }}">
+                                    <select name="status" class="status-select status-{{ ticket.status|lower|replace(' ', '-') }}"
+                                            onchange="this.className = 'status-select status-' + this.value.toLowerCase().replace(' ', '-')">
+                                        <option value="Open" {% if ticket.status == "Open" %}selected{% endif %}>Open</option>
+                                        <option value="In Progress" {% if ticket.status == "In Progress" %}selected{% endif %}>In Progress</option>
+                                        <option value="Resolved" {% if ticket.status == "Resolved" %}selected{% endif %}>Resolved</option>
+                                    </select>
+                                    <button type="submit">Update</button>
+                                </form>
+                            </td>
+                            <td>
+                                <button type="button" class="reply-toggle-btn" onclick="toggleReply({{ ticket.id }})">
+                                    Reply ({{ ticket.replies|length }})
+                                </button>
+                            </td>
+                        </tr>
+                        <tr id="reply-row-{{ ticket.id }}" class="reply-row" style="display: none;">
+                            <td colspan="8" class="reply-panel">
+                                <div class="reply-panel-inner">
+                                    <div class="reply-original-request">
+                                      <strong> Description:</strong> {{ ticket.description }}
+                                    </div>
+
+                                    {% if ticket.replies %}
+                                    <div class="reply-panel-label">Message history &middot; {{ ticket.issue }}</div>
+                                    <div class="reply-thread">
+                                        {% for reply in ticket.replies %}
+                                        <div class="reply-message-block {{ 'from-support' if reply.sender == 'support' else 'from-customer' }}">
+                                            <div class="reply-meta">
+                                                <span class="reply-sender">{{ "IT Support" if reply.sender == "support" else ticket.name }}</span>
+                                                <span class="reply-timestamp">{{ reply.created_at }}</span>
+                                            </div>
+                                            <div class="reply-message">{{ reply.message }}</div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <div class="reply-panel-label" style="padding-bottom: 14px;">No messages yet</div>
+                                    {% endif %}
+
+                                    <form class="reply-form" method="POST" action="{{ url_for('reply_to_ticket', ticket_id=ticket.id) }}">
+                                        <textarea name="message" rows="3" placeholder="Type your reply to {{ ticket.name }}..." required></textarea>
+                                        <button type="submit">Send Reply Email</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+                {% else %}
+                <p>No tickets yet.</p>
+                {% endif %}
+            </section>
+
+   <!--  Customer Contact Section -->
+<section id="contacts" class="page-section" style="display: none;">
+
+    <div class="list-header">
+        <div class="breadcrumb-row">
+            <span class="breadcrumb-icon">IT</span>
+            <span>Customers</span>
+        </div>
+
+        <div class="list-title-row">
+            <div class="list-title-left">
+                <h2>Customer Contact</h2>
+            </div>
+        </div>
+    </div>
+
+    <p class="section-intro">
+        Add a customer's contact information to the system.
+    </p>
+
+    <div class="ticket-form-card">
+        <form id="customerContactForm">
+
+            <div class="form-row">
+                <label for="customerName">Customer Name</label>
+                <input
+                    type="text"
+                    id="customerName"
+                    name="customerName"
+                    placeholder="Enter customer name"
+                    required
+                >
+            </div>
+
+            <div class="form-row">
+                <label for="customerContact">Contact</label>
+                <input
+                    type="text"
+                    id="customerContact"
+                    name="customerContact"
+                    placeholder="Email or phone number"
+                    required
+                >
+            </div>
+
+            <div class="form-row">
+                <label for="customerCountry">Country</label>
+                <input
+                    type="text"
+                    id="customerCountry"
+                    name="customerCountry"
+                    placeholder="Enter country"
+                    required
+                >
+            </div>
+
+            <div class="form-row">
+                <label for="customerCompany">Company</label>
+                <input
+                    type="text"
+                    id="customerCompany"
+                    name="customerCompany"
+                    placeholder="Enter company name"
+                    required
+                >
+            </div>
+
+            <button type="submit">Save Customer</button>
+
+        </form>
+    </div>
+
+</section>
+
+    <script>
+        // Shows the section matching the given id, hides the other two.
+        function showSection(sectionId) {
+            const sections = ["dashboard", "create", "tickets", "contacts"];
+            sections.forEach(function (id) {
+                document.getElementById(id).style.display = (id === sectionId) ? "block" : "none";
+            });
+        }
+
+        // Filters the tickets table down to just one status, triggered by
+        // clicking a dashboard card. Only touches rows with class "ticket-row"
+        // so hidden reply panels (class "reply-row") are never accidentally
+        // revealed by the filter.
+        function showTicketsByStatus(status) {
+            showSection("tickets");
+
+            const rows = document.querySelectorAll("#tickets tbody tr.ticket-row");
+
+            rows.forEach(function (row) {
+                row.style.display = (row.dataset.status === status) ? "" : "none";
+            });
+
+            document.getElementById("ticket-search").value = "";
+            document.getElementById("tickets-title").textContent = status + " Tickets";
+        }
+
+        // Resets the tickets table to show everything, used by the
+        // "All Tickets" sidebar link.
+        function showAllTickets() {
+            showSection("tickets");
+
+            const rows = document.querySelectorAll("#tickets tbody tr.ticket-row");
+            rows.forEach(function (row) {
+                row.style.display = "";
+            });
+
+            document.getElementById("ticket-search").value = "";
+            document.getElementById("tickets-title").textContent = "All Tickets";
+        }
+
+        // Live client-side search across name / email / subject,
+        // mirroring the "Search this list..." box in the reference UI.
+        function filterTicketsBySearch(query) {
+            const term = query.trim().toLowerCase();
+            const rows = document.querySelectorAll("#tickets tbody tr.ticket-row");
+
+            rows.forEach(function (row) {
+                const matches = !term || row.dataset.search.includes(term);
+                row.style.display = matches ? "" : "none";
+            });
+        }
+
+        // Shows/hides the reply history + reply form row under a specific ticket
+        function toggleReply(ticketId) {
+            const row = document.getElementById("reply-row-" + ticketId);
+            row.style.display = (row.style.display === "none") ? "table-row" : "none";
+        }
+
+        // On page load, check the URL's hash (e.g. #tickets) and show
+        // that section. This is how redirects from form submissions
+        // land you back on the right section instead of always the dashboard.
+        window.onload = function () {
+            const hash = window.location.hash.replace("#", "");
+            if (hash) {
+                showSection(hash);
+            }
+        };
+         // Save Customer Contact
+document.getElementById("customerContactForm").addEventListener("submit", function(event) {
+    event.preventDefault();
+
+    const customer = {
+        name: document.getElementById("customerName").value,
+        contact: document.getElementById("customerContact").value,
+        country: document.getElementById("customerCountry").value,
+        company: document.getElementById("customerCompany").value
+    };
+
+    // Get existing customers
+    let customers = JSON.parse(localStorage.getItem("customers")) || [];
+
+    // Add the new customer
+    customers.push(customer);
+
+    // Save customers
+    localStorage.setItem("customers", JSON.stringify(customers));
+
+    // Clear the form
+    document.getElementById("customerContactForm").reset();
+
+    alert("Customer saved successfully!");
+}); 
+    </script>
+
+
+</body>
+</html>
